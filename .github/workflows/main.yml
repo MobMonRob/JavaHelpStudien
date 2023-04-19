@@ -24,3 +24,8 @@ jobs:
           distribution: 'adopt'
       - name: Test Maven Package
         run: mvn clean test
+      - name: Upload Jacoco Test Coverage
+        uses: actions/upload-artifact@v2
+        with:
+          name: Test Coverage
+          path: target/site/jacoco/
