@@ -2,7 +2,7 @@
  * Copyright (c) 2023. Melvin Wulle
  * All rights reserved.
  */
-package com.mwulle.help.data;
+package com.mwulle.help.helpset;
 
 
 import javax.swing.tree.DefaultTreeModel;

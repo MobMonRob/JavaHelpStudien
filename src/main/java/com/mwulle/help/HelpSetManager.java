@@ -4,42 +4,55 @@
  */
 package com.mwulle.help;
 
-import com.mwulle.help.data.HelpSet;
-import com.mwulle.help.data.HelpSetBuilder;
-import com.mwulle.help.data.Merger;
-import com.mwulle.help.io.Parser;
-import com.mwulle.help.io.URLLoader;
+import com.mwulle.help.helpset.HelpSet;
+import com.mwulle.help.helpset.HelpSetBuilder;
+import com.mwulle.help.parser.Input;
+import com.mwulle.help.parser.helpset.HelpSetParser;
+import com.mwulle.help.parser.helpset.HelpSetResult;
+import com.mwulle.help.parser.index.IndexParser;
+import com.mwulle.help.parser.index.IndexResult;
+import com.mwulle.help.parser.map.MapParser;
+import com.mwulle.help.parser.map.MapResult;
+import com.mwulle.help.parser.toc.TocParser;
+import com.mwulle.help.parser.toc.TocResult;
+import com.mwulle.help.util.Merger;
 import org.openide.filesystems.*;
-import org.w3c.dom.Document;
 
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeModel;
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
 
 /**
+ * Manages all detected HelpSets.
  *
  * @author Melvin Wulle
  */
 public class HelpSetManager {
-    private Set<HelpSet> helpSets;
+    private static final HelpSetManager manager = new HelpSetManager();
+    private Set<HelpSet> helpSets = new HashSet<>(0);
 
-    public HelpSetManager () {
+    private HelpSetManager () {
+    }
+
+    public static HelpSetManager getInstance() {
+        return manager;
+    }
+    
+    public boolean containsHelp(String helpID) {
+        scan();
+        return contentOf(helpID) != null && indexOf(helpID) != null;
     }
 
     public TreeModel mergedToc() {
+        scan();
         DefaultTreeModel tree = null;
-        for (Iterator<HelpSet> it = helpSets.iterator(); it.hasNext(); ) {
-            HelpSet helpSet = it.next();
+        for (HelpSet helpSet : helpSets) {
             if (tree == null) {
                 tree = helpSet.getToc();
             } else {
-                Merger.merge(tree, helpSet.getToc());
+                Merger.mergeTrees(tree, helpSet.getToc());
             }
         }
 
@@ -47,6 +60,7 @@ public class HelpSetManager {
     }
 
     public String contentOf(String helpID) {
+        scan();
         for (HelpSet helpSet: helpSets) {
             if (helpSet.getMap().containsKey(helpID)) {
                 return helpSet.getMap().get(helpID);
@@ -56,6 +70,7 @@ public class HelpSetManager {
     }
 
     public String indexOf(String helpID) {
+        scan();
         for (HelpSet helpSet: helpSets) {
             if (helpSet.getIndex().containsKey(helpID)) {
                 return helpSet.getIndex().get(helpID);
@@ -64,64 +79,92 @@ public class HelpSetManager {
         return null;
     }
 
-    void scan() {
+    private void scan() {
         helpSets = new HashSet<>();
-        FileObject configFile =  FileUtil.getConfigFile("Services/JavaHelp");
         try {
-            configFile.getFileSystem().addFileChangeListener(new HelpConfigChangeListener());
-            for (FileObject helpSetFiles: configFile.getChildren()) {
-                addHelpSet(new URL(helpSetFiles.getAttribute("url").toString()));
+            FileObject services = FileUtil.getConfigFile("Services");
+            System.out.println(Arrays.toString(services.getChildren()));
+            FileObject javahelp = services.getFileObject("JavaHelp");
+            System.out.println(javahelp);
+            FileObject test = FileUtil.getConfigFile("Services/JavaHelp");
+            System.out.println(test);
+
+
+
+
+            FileObject folder =  FileUtil.getConfigRoot().getFileSystem().findResource("Services/JavaHelp");
+            if (folder != null) {
+                folder.getFileSystem().addFileChangeListener(new HelpConfigChangeListener());
+                for (FileObject helpSetFiles: folder.getChildren()) {
+                    addHelpSet(helpSetFiles.toURL());
+                }
             }
-        } catch (FileStateInvalidException | MalformedURLException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
     private void addHelpSet(URL url) {
         HelpSetBuilder builder = new HelpSetBuilder();
 
-        Document document = getDocumentOf(url);
-        Set<Document> indexDocuments = getDocumentsOf(Parser.getIndexURLs(document));
-        Set<Document> mapDocuments = getDocumentsOf(Parser.getMapURLs(document));
-        Set<Document> tocDocuments = getDocumentsOf(Parser.getTocURLs(document));
+        Optional<HelpSetResult> optionalHelpSetResult = HelpSetParser.parse(new Input(url));
 
+        assert optionalHelpSetResult.isPresent();
+        HelpSetResult helpSetResult = optionalHelpSetResult.get();
+
+        List<String> maps = helpSetResult.getMaps();
+        List<HelpSetResult.View> views = helpSetResult.getViews();
+
+        Map<String, String> map = new HashMap<>();
+        for (String mapReference: maps) {
+            try {
+                Optional<MapResult> optionalMapResult = MapParser.parse(new Input(url, mapReference));
+                assert optionalMapResult.isPresent();
+                map = Merger.mergeMaps(map, optionalMapResult.get().getMap());
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        Map<String, String> index = new HashMap<>();
+        for (HelpSetResult.View view: views) {
+            if (view.getType().equals("javax.help.IndexView")) {
+                try {
+                    Optional<IndexResult> optionalIndexResult = IndexParser.parse(new Input(url, view.getData()));
+                    assert optionalIndexResult.isPresent();
+                    index = Merger.mergeMaps(index, optionalIndexResult.get().getIndexes());
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        DefaultTreeModel toc = null;
+        for (HelpSetResult.View view: views) {
+            if (view.getType().equals("javax.help.TOCView")) {
+                try {
+                    Optional<TocResult> optionalTocResult = TocParser.parse(new Input(url, view.getData()));
+                    assert optionalTocResult.isPresent();
+                    if (toc != null) {
+                        toc = Merger.mergeTrees(toc, optionalTocResult.get().getTree());
+                    } else {
+                        toc = optionalTocResult.get().getTree();
+                    }
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        builder.setTitle(helpSetResult.getTitle());
         builder.setURL(url);
-        builder.setTitle(Parser.getTitle(document));
-
-        for (Document indexDocument: indexDocuments) {
-            builder.setIndex(Parser.getIndex(indexDocument));
-        }
-        for (Document mapDocument: mapDocuments) {
-            builder.setMap(Parser.getMap(mapDocument));
-        }
-        for (Document tocDocument: tocDocuments) {
-            builder.setToc(Parser.getToc(tocDocument));
-        }
+        builder.setIndex(index);
+        builder.setMap(map);
+        builder.setToc(toc);
 
         HelpSet helpSet = builder.build();
         helpSets.add(helpSet);
     }
-
-    private Document getDocumentOf(URL url) {
-        try (InputStream inputStream = URLLoader.inputStreamOf(url)){
-            return Parser.documentOf(inputStream);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private Set<Document> getDocumentsOf(Set<URL> urls) {
-        Set<Document> documents = new HashSet<>(urls.size());
-        for (URL url: urls) {
-            try (InputStream inputStream = URLLoader.inputStreamOf(url)){
-                documents.add(Parser.documentOf(inputStream));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return documents;
-    }
-
 
     private class HelpConfigChangeListener implements FileChangeListener {
         public HelpConfigChangeListener() {
@@ -169,5 +212,5 @@ public class HelpSetManager {
             helpSets.forEach(SearchEngine::index);
         }
     }
-    
+
 }

@@ -1,10 +1,10 @@
 /*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ * Copyright (c) 2023. Melvin Wulle
+ * All rights reserved.
  */
 package com.mwulle.help;
 
-import com.mwulle.help.data.HelpSet;
+import com.mwulle.help.helpset.HelpSet;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Fulltext search for all HelpSets build on Apache Lucene.
+ *
  * @author Melvin Wulle
  */
 public class SearchEngine {
@@ -110,5 +112,5 @@ public class SearchEngine {
 
         return builder.build();
     }
-    
+
 }
