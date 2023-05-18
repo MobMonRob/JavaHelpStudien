@@ -4,13 +4,16 @@
  */
 package com.mwulle.help.parser.toc;
 
+import com.mwulle.help.helpset.toc.TOCItem;
+import com.mwulle.help.helpset.toc.TOCItemNodeFactory;
+import com.mwulle.help.helpset.toc.TOCItemNode;
 import com.mwulle.help.parser.BasicParser;
 import com.mwulle.help.parser.Input;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
-import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.MutableTreeNode;
 import java.util.Optional;
@@ -30,14 +33,47 @@ public class TocParser extends BasicParser {
         }
     }
 
-    private static DefaultTreeModel getTree(Document document) {
-        MutableTreeNode root = getTocNode(document.getDocumentElement());
-        return new DefaultTreeModel(root);
+    private static TOCItemNode getTree(Document document) {
+        Node node = document.getElementsByTagName("toc").item(0);
+
+        if (node.getNodeType() == Node.ELEMENT_NODE) {
+            Element element = (Element) node;
+            return createTOCItemNode(element);
+        }else {
+            throw new RuntimeException();
+        }
     }
 
-    private static DefaultMutableTreeNode getTocNode(Element element) {
+    private static TOCItemNode createTOCItemNode(Element element) {
         if (element.getTagName().equals("tocitem")){
-            TocResult.TocItem tocItem = new TocResult.TocItem();
+            TOCItem tocItem = createTocItem(element);
+            if (element.hasChildNodes()){
+                TOCItemNodeFactory factory = new TOCItemNodeFactory();
+                for (int i = 0; i < element.getChildNodes().getLength(); i++) {
+                    Node node = element.getChildNodes().item(i);
+                    if (node.getNodeType() == Node.ELEMENT_NODE) {
+                        Element e = (Element) node;
+                        if (e.getTagName().equals("tocitem")){
+                            factory.addTocItem(createTOCItemNode(element));
+                        }
+                    }
+                }
+                return new TOCItemNode(tocItem, factory);
+            } else {
+                return new TOCItemNode(tocItem);
+            }
+        }
+        return new TOCItemNode(null);
+    }
+
+    private static TOCItemNodeFactory createChildren(NodeList nodes) {
+        TOCItemNodeFactory factory = new TOCItemNodeFactory();
+
+        return factory;
+    }
+
+    private static TOCItem createTocItem(Element element) {
+            TOCItem tocItem = new TOCItem();
 
             if (element.hasAttribute("text")) {
                 String text = element.getAttribute("text");
@@ -47,21 +83,6 @@ public class TocParser extends BasicParser {
                 String helpID = element.getAttribute("target");
                 tocItem.setHelpID(helpID);
             }
-
-
-            if (element.hasChildNodes()) {
-                DefaultMutableTreeNode result = new DefaultMutableTreeNode(tocItem, true);
-                for (int i = 0; i < element.getChildNodes().getLength(); i++) {
-                    Node node = element.getChildNodes().item(i);
-                    if (node.getNodeType() == Node.ELEMENT_NODE) {
-                        result.add(getTocNode((Element) node));
-                    }
-                }
-                return result;
-            } else {
-                return new DefaultMutableTreeNode(tocItem);
-            }
-        }
-        return null;
+            return tocItem;
     }
 }

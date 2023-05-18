@@ -4,44 +4,23 @@
  */
 package com.mwulle.help.parser.toc;
 
+import com.mwulle.help.helpset.toc.TOCItemNode;
+
 import javax.swing.tree.DefaultTreeModel;
 
 public class TocResult {
-    private DefaultTreeModel tree;
+    private TOCItemNode tree;
 
     TocResult() {
 
     }
 
-    public DefaultTreeModel getTree() {
+    public TOCItemNode getTree() {
         return tree;
     }
 
-    void setTree(DefaultTreeModel tree) {
+    void setTree(TOCItemNode tree) {
         this.tree = tree;
     }
 
-    public static class TocItem {
-        private String text;
-        private String helpID;
-
-        public TocItem() {
-        }
-
-        public String getText() {
-            return text;
-        }
-
-        void setText(String text) {
-            this.text = text;
-        }
-
-        public String getHelpID() {
-            return helpID;
-        }
-
-        void setHelpID(String helpID) {
-            this.helpID = helpID;
-        }
-    }
 }

@@ -6,6 +6,8 @@ package com.mwulle.help;
 
 import com.mwulle.help.helpset.HelpSet;
 import com.mwulle.help.helpset.HelpSetBuilder;
+import com.mwulle.help.helpset.toc.TOCItem;
+import com.mwulle.help.helpset.toc.TOCItemNode;
 import com.mwulle.help.parser.Input;
 import com.mwulle.help.parser.helpset.HelpSetParser;
 import com.mwulle.help.parser.helpset.HelpSetResult;
@@ -17,6 +19,7 @@ import com.mwulle.help.parser.toc.TocParser;
 import com.mwulle.help.parser.toc.TocResult;
 import com.mwulle.help.util.Merger;
 import org.openide.filesystems.*;
+import org.openide.util.HelpCtx;
 
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeModel;
@@ -31,9 +34,25 @@ import java.util.*;
  */
 public class HelpSetManager {
     private static final HelpSetManager manager = new HelpSetManager();
-    private Set<HelpSet> helpSets = new HashSet<>(0);
+    private HelpSet master;
 
     private HelpSetManager () {
+        master = master();
+    }
+
+    private static HelpSet master() {
+        HelpSetBuilder builder = new HelpSetBuilder();
+
+        TOCItem tocItem = new TOCItem();
+        tocItem.setText("JHelp");
+        tocItem.setHelpID(HelpCtx.DEFAULT_HELP.getHelpID());
+        builder.setToc(new TOCItemNode(tocItem));
+
+        Map<String, String> map = new HashMap<>(1);
+        map.put(HelpCtx.DEFAULT_HELP.getHelpID(), "<a href=\"https://github.com/MobMonRob/JavaHelpStudien\">JHelp</a>");
+        builder.setMap(map);
+
+        return builder.build();
     }
 
     public static HelpSetManager getInstance() {
@@ -41,62 +60,28 @@ public class HelpSetManager {
     }
     
     public boolean containsHelp(String helpID) {
-        scan();
         return contentOf(helpID) != null && indexOf(helpID) != null;
     }
 
-    public TreeModel mergedToc() {
-        scan();
-        DefaultTreeModel tree = null;
-        for (HelpSet helpSet : helpSets) {
-            if (tree == null) {
-                tree = helpSet.getToc();
-            } else {
-                Merger.mergeTrees(tree, helpSet.getToc());
-            }
-        }
-
-        return tree;
+    public TOCItemNode toc() {
+        return master.getToc();
     }
 
     public String contentOf(String helpID) {
-        scan();
-        for (HelpSet helpSet: helpSets) {
-            if (helpSet.getMap().containsKey(helpID)) {
-                return helpSet.getMap().get(helpID);
-            }
-        }
-        return null;
+        return master.getMap().get(helpID);
     }
 
     public String indexOf(String helpID) {
-        scan();
-        for (HelpSet helpSet: helpSets) {
-            if (helpSet.getIndex().containsKey(helpID)) {
-                return helpSet.getIndex().get(helpID);
-            }
-        }
-        return null;
+        return master.getIndex().get(helpID);
     }
 
     private void scan() {
-        helpSets = new HashSet<>();
         try {
-            FileObject services = FileUtil.getConfigFile("Services");
-            System.out.println(Arrays.toString(services.getChildren()));
-            FileObject javahelp = services.getFileObject("JavaHelp");
-            System.out.println(javahelp);
-            FileObject test = FileUtil.getConfigFile("Services/JavaHelp");
-            System.out.println(test);
-
-
-
-
             FileObject folder =  FileUtil.getConfigRoot().getFileSystem().findResource("Services/JavaHelp");
             if (folder != null) {
                 folder.getFileSystem().addFileChangeListener(new HelpConfigChangeListener());
                 for (FileObject helpSetFiles: folder.getChildren()) {
-                    addHelpSet(helpSetFiles.toURL());
+                    loadHelpSet(helpSetFiles.toURL());
                 }
             }
         } catch (Exception e) {
@@ -104,66 +89,62 @@ public class HelpSetManager {
         }
     }
 
-    private void addHelpSet(URL url) {
+    private void loadHelpSet(URL url) {
         HelpSetBuilder builder = new HelpSetBuilder();
 
         Optional<HelpSetResult> optionalHelpSetResult = HelpSetParser.parse(new Input(url));
 
-        assert optionalHelpSetResult.isPresent();
-        HelpSetResult helpSetResult = optionalHelpSetResult.get();
+        if (optionalHelpSetResult.isPresent()) {
+            HelpSetResult helpSetResult = optionalHelpSetResult.get();
 
-        List<String> maps = helpSetResult.getMaps();
-        List<HelpSetResult.View> views = helpSetResult.getViews();
+            List<String> maps = helpSetResult.getMaps();
+            List<HelpSetResult.View> views = helpSetResult.getViews();
 
-        Map<String, String> map = new HashMap<>();
-        for (String mapReference: maps) {
-            try {
-                Optional<MapResult> optionalMapResult = MapParser.parse(new Input(url, mapReference));
-                assert optionalMapResult.isPresent();
-                map = Merger.mergeMaps(map, optionalMapResult.get().getMap());
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            }
-        }
-
-        Map<String, String> index = new HashMap<>();
-        for (HelpSetResult.View view: views) {
-            if (view.getType().equals("javax.help.IndexView")) {
+            Map<String, String> map = new HashMap<>();
+            for (String mapReference: maps) {
                 try {
-                    Optional<IndexResult> optionalIndexResult = IndexParser.parse(new Input(url, view.getData()));
-                    assert optionalIndexResult.isPresent();
-                    index = Merger.mergeMaps(index, optionalIndexResult.get().getIndexes());
+                    Optional<MapResult> optionalMapResult = MapParser.parse(new Input(url, mapReference));
+                    assert optionalMapResult.isPresent();
+                    map = Merger.mergeMaps(map, optionalMapResult.get().getMap());
                 } catch (MalformedURLException e) {
                     e.printStackTrace();
                 }
             }
-        }
 
-        DefaultTreeModel toc = null;
-        for (HelpSetResult.View view: views) {
-            if (view.getType().equals("javax.help.TOCView")) {
-                try {
-                    Optional<TocResult> optionalTocResult = TocParser.parse(new Input(url, view.getData()));
-                    assert optionalTocResult.isPresent();
-                    if (toc != null) {
-                        toc = Merger.mergeTrees(toc, optionalTocResult.get().getTree());
-                    } else {
-                        toc = optionalTocResult.get().getTree();
+            Map<String, String> index = new HashMap<>();
+            for (HelpSetResult.View view: views) {
+                if (view.getType().equals("javax.help.IndexView")) {
+                    try {
+                        Optional<IndexResult> optionalIndexResult = IndexParser.parse(new Input(url, view.getData()));
+                        assert optionalIndexResult.isPresent();
+                        index = Merger.mergeMaps(index, optionalIndexResult.get().getIndexes());
+                    } catch (MalformedURLException e) {
+                        e.printStackTrace();
                     }
-                } catch (MalformedURLException e) {
-                    e.printStackTrace();
                 }
             }
+
+            TOCItem root = new TOCItem();
+            root.setText(helpSetResult.getTitle());
+            TOCItemNode toc = new TOCItemNode(root);
+            for (HelpSetResult.View view: views) {
+                if (view.getType().equals("javax.help.TOCView")) {
+                    try {
+                        Optional<TocResult> optionalTocResult = TocParser.parse(new Input(url, view.getData()));
+                        assert optionalTocResult.isPresent();
+                        Merger.appendTree(toc, optionalTocResult.get().getTree());
+                    } catch (MalformedURLException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+            builder.setIndex(index);
+            builder.setMap(map);
+            builder.setToc(toc);
+
+            master.merge(builder.build());
         }
-
-        builder.setTitle(helpSetResult.getTitle());
-        builder.setURL(url);
-        builder.setIndex(index);
-        builder.setMap(map);
-        builder.setToc(toc);
-
-        HelpSet helpSet = builder.build();
-        helpSets.add(helpSet);
     }
 
     private class HelpConfigChangeListener implements FileChangeListener {
@@ -174,42 +155,42 @@ public class HelpSetManager {
         public void fileFolderCreated(FileEvent fileEvent) {
             SearchEngine.deleteIndex();
             scan();
-            helpSets.forEach(SearchEngine::index);
+            SearchEngine.index(master);
         }
 
         @Override
         public void fileDataCreated(FileEvent fileEvent) {
             SearchEngine.deleteIndex();
             scan();
-            helpSets.forEach(SearchEngine::index);
+            SearchEngine.index(master);
         }
 
         @Override
         public void fileChanged(FileEvent fileEvent) {
             SearchEngine.deleteIndex();
             scan();
-            helpSets.forEach(SearchEngine::index);
+            SearchEngine.index(master);
         }
 
         @Override
         public void fileDeleted(FileEvent fileEvent) {
             SearchEngine.deleteIndex();
             scan();
-            helpSets.forEach(SearchEngine::index);
+            SearchEngine.index(master);
         }
 
         @Override
         public void fileRenamed(FileRenameEvent fileEvent) {
             SearchEngine.deleteIndex();
             scan();
-            helpSets.forEach(SearchEngine::index);
+            SearchEngine.index(master);
         }
 
         @Override
         public void fileAttributeChanged(FileAttributeEvent fileEvent) {
             SearchEngine.deleteIndex();
             scan();
-            helpSets.forEach(SearchEngine::index);
+            SearchEngine.index(master);
         }
     }
 

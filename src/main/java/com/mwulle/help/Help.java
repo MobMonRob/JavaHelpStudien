@@ -41,7 +41,11 @@ public class Help {
             contentHeader = manager.indexOf(helpID);
         }
 
-        component.open();
+        if (!component.isOpened()){
+            component.open();
+        }
+
+        component.setRootContext(manager.toc());
         component.setContent(content);
         component.setContentHeader(contentHeader);
     }

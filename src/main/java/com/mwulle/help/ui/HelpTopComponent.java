@@ -4,16 +4,19 @@
  */
 package com.mwulle.help.ui;
 
-import com.mwulle.help.Help;
-import com.mwulle.help.HelpSetManager;
 import com.mwulle.help.SearchEngine;
+import com.mwulle.help.helpset.toc.TOCItem;
+import com.mwulle.help.helpset.toc.TOCItemNodeFactory;
+import com.mwulle.help.helpset.toc.TOCItemNode;
 import org.netbeans.api.settings.ConvertAsProperties;
 import org.openide.awt.ActionID;
 import org.openide.awt.ActionReference;
+import org.openide.explorer.ExplorerManager;
+import org.openide.explorer.ExplorerUtils;
+import org.openide.explorer.view.BeanTreeView;
 import org.openide.windows.TopComponent;
 import org.openide.util.NbBundle.Messages;
 
-import javax.swing.tree.TreeModel;
 import java.util.List;
 
 /**
@@ -40,18 +43,15 @@ import java.util.List;
     "CTL_HelpTopComponent=Help",
     "HINT_HelpTopComponent=This is a Help window"
 })
-public final class HelpTopComponent extends TopComponent {
-    private static final HelpTopComponent INSTANCE = new HelpTopComponent();
+public final class HelpTopComponent extends TopComponent implements ExplorerManager.Provider{
+    private transient ExplorerManager explorerManager = new ExplorerManager();
 
     public HelpTopComponent() {
         initComponents();
         setName(Bundle.CTL_HelpTopComponent());
         setToolTipText(Bundle.HINT_HelpTopComponent());
-        setTOC(HelpSetManager.getInstance().mergedToc());
-    }
+        associateLookup(ExplorerUtils.createLookup(explorerManager, getActionMap()));
 
-    public void setTOC(TreeModel model) {
-        TOCTree.setModel(model);
     }
 
     public void setContent(String text) {
@@ -60,6 +60,10 @@ public final class HelpTopComponent extends TopComponent {
 
     public void setContentHeader(String text) {
         contentHeader.setText(text);
+    }
+
+    public void setRootContext(TOCItemNode rootContext) {
+        explorerManager.setRootContext(rootContext);
     }
 
     /**
@@ -73,8 +77,7 @@ public final class HelpTopComponent extends TopComponent {
         panel = new javax.swing.JPanel();
         tabbedPane = new javax.swing.JTabbedPane();
         TOCPane = new javax.swing.JPanel();
-        TOCScrollPane = new javax.swing.JScrollPane();
-        TOCTree = new javax.swing.JTree();
+        tocPane = new BeanTreeView();
         searchPane = new javax.swing.JPanel();
         searchField = new javax.swing.JTextField();
         resultsPane = new javax.swing.JScrollPane();
@@ -88,24 +91,17 @@ public final class HelpTopComponent extends TopComponent {
 
         TOCPane.setNextFocusableComponent(searchPane);
 
-        TOCTree.setModel(null);
-        TOCScrollPane.setViewportView(TOCTree);
-
         javax.swing.GroupLayout TOCPaneLayout = new javax.swing.GroupLayout(TOCPane);
         TOCPane.setLayout(TOCPaneLayout);
         TOCPaneLayout.setHorizontalGroup(
             TOCPaneLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 209, Short.MAX_VALUE)
-            .addGroup(TOCPaneLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addComponent(TOCScrollPane, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 209, Short.MAX_VALUE))
+            .addComponent(tocPane, javax.swing.GroupLayout.DEFAULT_SIZE, 209, Short.MAX_VALUE)
         );
         TOCPaneLayout.setVerticalGroup(
             TOCPaneLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 490, Short.MAX_VALUE)
-            .addGroup(TOCPaneLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(TOCPaneLayout.createSequentialGroup()
-                    .addContainerGap()
-                    .addComponent(TOCScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 484, Short.MAX_VALUE)))
+            .addGroup(TOCPaneLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(tocPane, javax.swing.GroupLayout.DEFAULT_SIZE, 484, Short.MAX_VALUE))
         );
 
         tabbedPane.addTab(org.openide.util.NbBundle.getMessage(HelpTopComponent.class, "HelpTopComponent.TOCPane.TabConstraints.tabTitle"), TOCPane); // NOI18N
@@ -215,8 +211,6 @@ public final class HelpTopComponent extends TopComponent {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPanel TOCPane;
-    private javax.swing.JScrollPane TOCScrollPane;
-    private javax.swing.JTree TOCTree;
     private javax.swing.JLabel content;
     private javax.swing.JLabel contentHeader;
     private javax.swing.JPanel contentPanel;
@@ -227,6 +221,7 @@ public final class HelpTopComponent extends TopComponent {
     private javax.swing.JTextField searchField;
     private javax.swing.JPanel searchPane;
     private javax.swing.JTabbedPane tabbedPane;
+    private javax.swing.JScrollPane tocPane;
     // End of variables declaration//GEN-END:variables
     @Override
     public void componentOpened() {
@@ -248,5 +243,10 @@ public final class HelpTopComponent extends TopComponent {
     void readProperties(java.util.Properties p) {
         String version = p.getProperty("version");
         // TODO read your settings according to their version
+    }
+
+    @Override
+    public ExplorerManager getExplorerManager() {
+        return explorerManager;
     }
 }

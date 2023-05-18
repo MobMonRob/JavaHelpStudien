@@ -4,6 +4,7 @@
  */
 package com.mwulle.help.helpset;
 
+import com.mwulle.help.helpset.toc.TOCItemNode;
 import com.mwulle.help.util.Merger;
 
 import javax.swing.tree.DefaultTreeModel;
@@ -19,14 +20,6 @@ public class HelpSetBuilder {
 
     public void reset() {
         helpSet = new HelpSet();
-    }
-
-    public void setURL(URL url) {
-        helpSet.setUrl(url);
-    }
-
-    public void setTitle(String title) {
-        helpSet.setTitle(title);
     }
 
     public void setIndex(Map<String, String> index) {
@@ -45,9 +38,9 @@ public class HelpSetBuilder {
         }
     }
 
-    public void setToc(DefaultTreeModel toc) {
+    public void setToc(TOCItemNode toc) {
         if (helpSet.getToc() != null){
-            helpSet.setToc(Merger.mergeTrees(helpSet.getToc(), toc));
+            helpSet.setToc(Merger.appendTree(helpSet.getToc(), toc));
         } else {
             helpSet.setToc(toc);
         }
