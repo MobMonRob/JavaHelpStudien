@@ -18,6 +18,9 @@ import org.openide.util.*;
 import org.openide.windows.TopComponent;
 import org.openide.util.NbBundle.Messages;
 
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
+import java.awt.*;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -56,6 +59,19 @@ public final class HelpTopComponent extends TopComponent implements LookupListen
         setToolTipText(Bundle.HINT_HelpTopComponent());
         associateLookup(ExplorerUtils.createLookup(explorerManager, getActionMap()));
         contentEditorPane.setContentType("text/html");
+        contentEditorPane.setEditable(false);
+        contentEditorPane.setOpaque(false);
+
+        contentEditorPane.addHyperlinkListener(hle -> {
+            if (HyperlinkEvent.EventType.ACTIVATED.equals(hle.getEventType())) {
+                try {
+                    Desktop desktop = Desktop.getDesktop();
+                    desktop.browse(hle.getURL().toURI());
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
     }
 
     public void setContent(String text) {
