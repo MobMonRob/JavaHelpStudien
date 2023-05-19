@@ -2,11 +2,12 @@
  * Copyright (c) 2023. Melvin Wulle
  * All rights reserved.
  */
-package com.mwulle.help.data;
+package com.mwulle.help.helpset;
 
 
-import javax.swing.tree.DefaultTreeModel;
-import java.net.URL;
+import com.mwulle.help.helpset.toc.TOCItemNode;
+import com.mwulle.help.util.Merger;
+
 import java.util.Map;
 
 /**
@@ -14,21 +15,17 @@ import java.util.Map;
  * @author Melvin Wulle
  */
 public class HelpSet {
-    private URL url;
-    private String title;
     private Map<String, String> index;
     private Map<String, String> map;
-    private DefaultTreeModel toc;
+    private TOCItemNode toc;
 
     public HelpSet() {
     }
 
-    public URL getUrl() {
-        return url;
-    }
-
-    public String getTitle() {
-        return title;
+    public void merge(HelpSet helpSet) {
+        this.index = Merger.mergeMaps(this.index, helpSet.getIndex());
+        this.map = Merger.mergeMaps(this.map, helpSet.getMap());
+        this.toc = Merger.appendTree(this.toc, helpSet.getToc());
     }
 
     public Map<String, String> getIndex() {
@@ -39,16 +36,8 @@ public class HelpSet {
         return this.map;
     }
 
-    public DefaultTreeModel getToc() {
+    public TOCItemNode getToc() {
         return this.toc;
-    }
-
-    void setUrl(URL url) {
-        this.url = url;
-    }
-
-    void setTitle(String title) {
-        this.title = title;
     }
 
     void setIndex(Map<String, String> index) {
@@ -59,7 +48,7 @@ public class HelpSet {
         this.map = map;
     }
 
-    void setToc(DefaultTreeModel toc) {
+    void setToc(TOCItemNode toc) {
         this.toc = toc;
     }
 
