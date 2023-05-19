@@ -1,5 +1,8 @@
 package com.mwulle.help.helpset.toc;
 
+import org.openide.util.lookup.ServiceProvider;
+
+@ServiceProvider(service = TOCItem.class)
 public class TOCItem {
     String text;
     String helpID;

@@ -4,9 +4,10 @@
  */
 package com.mwulle.help.ui;
 
+import com.mwulle.help.Help;
+import com.mwulle.help.HelpSetManager;
 import com.mwulle.help.SearchEngine;
 import com.mwulle.help.helpset.toc.TOCItem;
-import com.mwulle.help.helpset.toc.TOCItemNodeFactory;
 import com.mwulle.help.helpset.toc.TOCItemNode;
 import org.netbeans.api.settings.ConvertAsProperties;
 import org.openide.awt.ActionID;
@@ -14,10 +15,13 @@ import org.openide.awt.ActionReference;
 import org.openide.explorer.ExplorerManager;
 import org.openide.explorer.ExplorerUtils;
 import org.openide.explorer.view.BeanTreeView;
+import org.openide.util.*;
 import org.openide.windows.TopComponent;
 import org.openide.util.NbBundle.Messages;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Top component which displays something.
@@ -43,19 +47,20 @@ import java.util.List;
     "CTL_HelpTopComponent=Help",
     "HINT_HelpTopComponent=This is a Help window"
 })
-public final class HelpTopComponent extends TopComponent implements ExplorerManager.Provider{
-    private transient ExplorerManager explorerManager = new ExplorerManager();
+public final class HelpTopComponent extends TopComponent implements LookupListener, ExplorerManager.Provider{
+    private final transient ExplorerManager explorerManager = new ExplorerManager();
+    private Lookup.Result<TOCItem> result = null;
 
     public HelpTopComponent() {
         initComponents();
         setName(Bundle.CTL_HelpTopComponent());
         setToolTipText(Bundle.HINT_HelpTopComponent());
         associateLookup(ExplorerUtils.createLookup(explorerManager, getActionMap()));
-
+        contentEditorPane.setContentType("text/html");
     }
 
     public void setContent(String text) {
-        content.setText(text);
+        contentEditorPane.setText(text);
     }
 
     public void setContentHeader(String text) {
@@ -85,7 +90,7 @@ public final class HelpTopComponent extends TopComponent implements ExplorerMana
         contentPanel = new javax.swing.JPanel();
         contentHeader = new javax.swing.JLabel();
         contentScrollPane = new javax.swing.JScrollPane();
-        content = new javax.swing.JLabel();
+        contentEditorPane = new javax.swing.JEditorPane();
 
         setNextFocusableComponent(TOCPane);
 
@@ -140,11 +145,7 @@ public final class HelpTopComponent extends TopComponent implements ExplorerMana
         contentScrollPane.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         contentScrollPane.setMinimumSize(new java.awt.Dimension(300, 200));
         contentScrollPane.setPreferredSize(new java.awt.Dimension(300, 200));
-
-        content.setToolTipText(org.openide.util.NbBundle.getMessage(HelpTopComponent.class, "HelpTopComponent.content.toolTipText")); // NOI18N
-        content.setVerticalAlignment(javax.swing.SwingConstants.TOP);
-        content.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
-        contentScrollPane.setViewportView(content);
+        contentScrollPane.setViewportView(contentEditorPane);
 
         javax.swing.GroupLayout contentPanelLayout = new javax.swing.GroupLayout(contentPanel);
         contentPanel.setLayout(contentPanelLayout);
@@ -211,7 +212,7 @@ public final class HelpTopComponent extends TopComponent implements ExplorerMana
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPanel TOCPane;
-    private javax.swing.JLabel content;
+    private javax.swing.JEditorPane contentEditorPane;
     private javax.swing.JLabel contentHeader;
     private javax.swing.JPanel contentPanel;
     private javax.swing.JScrollPane contentScrollPane;
@@ -225,12 +226,13 @@ public final class HelpTopComponent extends TopComponent implements ExplorerMana
     // End of variables declaration//GEN-END:variables
     @Override
     public void componentOpened() {
-        // TODO add custom code on component opening
+        result = Utilities.actionsGlobalContext().lookupResult(TOCItem.class);
+        result.addLookupListener(this);
     }
 
     @Override
     public void componentClosed() {
-        // TODO add custom code on component closing
+        result.removeLookupListener(this);
     }
 
     void writeProperties(java.util.Properties p) {
@@ -248,5 +250,17 @@ public final class HelpTopComponent extends TopComponent implements ExplorerMana
     @Override
     public ExplorerManager getExplorerManager() {
         return explorerManager;
+    }
+
+    @Override
+    public void resultChanged(LookupEvent ev) {
+        Collection<? extends TOCItem> allTOCItems = result.allInstances();
+        Optional<TOCItem> optional = (Optional<TOCItem>) allTOCItems.stream().findFirst();
+        if (optional.isPresent()){
+            TOCItem item = optional.get();
+            String content = HelpSetManager.getInstance().contentOf(item.getHelpID());
+            setContent(content);
+            setContentHeader(item.getText());
+        }
     }
 }

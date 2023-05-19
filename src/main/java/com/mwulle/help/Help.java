@@ -7,27 +7,27 @@ package com.mwulle.help;
 import com.mwulle.help.ui.HelpTopComponent;
 import org.openide.modules.OnStart;
 import org.openide.util.HelpCtx;
+import org.openide.util.lookup.ServiceProvider;
 import org.openide.windows.WindowManager;
-
-import java.util.Timer;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Help. Initialization of the program and incoming requests of help are handled here.
  *
  * @author Melvin Wulle
  */
-public class Help {
+@ServiceProvider(service = HelpCtx.Displayer.class)
+public class Help implements HelpCtx.Displayer{
     private static final Help INSTANCE = new Help();
 
-    private Help() {
+    public Help() {
     }
     
     public static Help getInstance() {
         return INSTANCE;
     }
 
-    public void display(HelpCtx helpCtx) {
+    @Override
+    public boolean display(HelpCtx helpCtx) {
         HelpSetManager manager = HelpSetManager.getInstance();
         HelpTopComponent component = (HelpTopComponent) WindowManager.getDefault().findTopComponent("HelpTopComponent");
 
@@ -41,13 +41,11 @@ public class Help {
             contentHeader = manager.indexOf(helpID);
         }
 
-        if (!component.isOpened()){
-            component.open();
-        }
-
+        component.open();
         component.setRootContext(manager.toc());
         component.setContent(content);
         component.setContentHeader(contentHeader);
+        return true;
     }
 
     @OnStart
