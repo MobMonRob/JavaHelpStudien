@@ -15,7 +15,9 @@ JHelp currently only supports a limited subset of features of JavaHelp and only 
 
 To install JHelp in your locale maven repository run:
 
-``` mvn clean install```
+```
+mvn clean install
+```
 
 ## Usage
 
