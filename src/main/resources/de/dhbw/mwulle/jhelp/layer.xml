@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE filesystem PUBLIC "-//NetBeans//DTD Filesystem 1.2//EN" "http://www.netbeans.org/dtds/filesystem-1_2.dtd">
+<filesystem>
+    <folder name="Actions">
+        <folder name="Window">
+            <file name="com-mwulle-jHelp-ui-HelpTopComponent.instance">
+                <attr name="iconBase" stringvalue="com/mwulle/jHelp/ui/jHelp-16x16.png"/>
+                <attr name="instanceCreate" methodvalue="org.openide.windows.TopComponent.openAction"/>
+                <attr name="preferredID" stringvalue="HelpViewerTopComponent"/>
+            </file>
+            <file name="com-mwulle-jHelp-ui-HelpViewerTopComponent.instance_hidden"/>
+        </folder>
+    </folder>
+</filesystem>
