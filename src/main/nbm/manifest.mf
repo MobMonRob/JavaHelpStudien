@@ -1,5 +1,5 @@
 Manifest-Version: 1.0
-OpenIDE-Module-Layer: com/mwulle/help/layer.xml
-OpenIDE-Module-Localizing-Bundle: com/mwulle/help/Bundle.properties
+OpenIDE-Module-Layer: de/dhbw/mwulle/jhelp/layer.xml
+OpenIDE-Module-Localizing-Bundle: de/dhbw/mwulle/jhelp/Bundle.properties
 OpenIDE-Module-Requires: org.openide.windows.WindowManager
 

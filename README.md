@@ -1,1 +1,1 @@
-# Help - A replacement for JavaHelp for NetBeans
+# JHelp - A replacement for JavaHelp for NetBeans
