@@ -2,7 +2,7 @@
 
 ## Disclaimer
 
-The project is a study work done at the DHBW-Karlsruhe. If you are interested in please look at the follow up project: 
+This project is a study work done at the DHBW-Karlsruhe instructed by Oliver Rettig. If you are interested in, please look at the follow up project: (https://github.com/MobMonRob/JavaHelpStudien2).
 
 ## Description
 
