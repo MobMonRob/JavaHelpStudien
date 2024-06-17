@@ -2,9 +2,7 @@
 
 ## Disclaimer
 
-The project is in an early state of development, so it is not advised to use it in real world 
-applications. If you have feedback or feature suggestions, please create a new
-[GitHub Issue](https://github.com/MobMonRob/JavaHelpStudien/issues/new).
+The project is a study work done at the DHBW-Karlsruhe. If you are interested in please look at the follow up project: 
 
 ## Description
 
